@@ -1,0 +1,12 @@
+# templates/backend-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "my-app-chart.fullname" . }}-backend
+spec:
+  replicas: {{ .Values.backend.replicas }}
+  template:
+    spec:
+      containers:
+        - name: {{ .Chart.Name }}-backend
+          image: "{{ .Values.backend.image.repository }}:{{ .Values.backend.image.tag }}"

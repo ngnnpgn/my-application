@@ -1,0 +1,198 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ .Values.secret.nameApp }}
+type: Opaque
+data:
+  {{- range $key, $val := .Values.envApp.secret }}
+  {{ $key }}: {{ $val | b64enc }}
+  {{- end}}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ .Values.secret.nameDb }}
+type: Opaque
+data:
+  {{- range $key, $val := .Values.envDb.secret }}
+  {{ $key }}: {{ $val | b64enc }}
+  {{- end}}
+---
+kind: PersistentVolume
+apiVersion: v1
+metadata:
+  name: {{ .Values.persistentVolumeName }}
+  labels:
+    type: local
+spec:
+  storageClassName: manual
+  accessModes:
+    - ReadWriteOnce
+  capacity:
+    storage: 1Gi
+  hostPath:
+    path: /data/postgresmm
+    type: DirectoryOrCreate
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Values.volumeClaimName }}
+  labels:
+    app: postgrespv
+spec:  
+  accessModes:
+    - ReadWriteOnce
+  # storageClassName: local-storage
+  storageClassName: manual
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.dbName }}
+  labels:
+    app: {{ .Values.dbName }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Values.dbName }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.dbName }}
+    spec:
+      containers:
+      - name: {{ .Values.dbName }}
+        image: "{{ .Values.dbImageName }}:{{ .Values.dbImageVersion }}"
+        resources:
+          limits:
+            memory: "2G"
+            cpu: "1.5"
+          requests:
+            memory: "1G"
+            cpu: "0.5"
+        env:
+          {{- include "helpers.list-envDb-variables" . | indent 10 }}
+        ports:
+        - containerPort: 5432
+        volumeMounts:
+        - name: hostvol
+          mountPath: /var/lib/postgresql/data
+      volumes:
+      - name: hostvol
+        persistentVolumeClaim:
+          claimName: {{ .Values.volumeClaimName }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.dbServiceName }}
+  labels:
+    app: {{ .Values.dbServiceName }}
+spec:
+  ports:
+  - port: 5432
+    protocol: TCP
+  selector:
+    app: {{ .Values.dbName }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.backendAppName }}
+  labels:
+    app: {{ .Values.backendAppName }}    
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Values.backendAppName }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.backendAppName }}
+    spec:
+      containers:
+      - name: {{ .Values.backendAppName }}
+        image: "{{ .Values.backendImageName }}:{{ .Values.backendImageVersion }}" 
+        imagePullPolicy: Always
+        resources:
+          limits:
+            memory: "1G"
+            cpu: "0.5"
+          requests:
+            memory: "768M"
+            cpu: "0.5"
+        env:
+          {{- include "helpers.list-envApp-variables" . | indent 10 }}
+        ports:
+        - containerPort: 8080
+        livenessProbe:
+          httpGet:
+            path: "/actuator/health/livenessState"
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        startupProbe:
+          httpGet:
+            path: "/actuator/health/readinessState"
+            port: 8080
+          failureThreshold: 60
+          periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.backendServiceName }} 
+  labels:
+    run: {{ .Values.backendServiceName }} 
+spec:
+  type: NodePort
+  ports:
+  - port: 8080
+    protocol: TCP
+  selector:
+    app: {{ .Values.backendAppName }}
+---
+# templates - front-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.frontAppName }}
+  labels:
+    app: {{ .Values.frontAppName }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Values.frontAppName }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.frontAppName }}
+    spec:
+      containers:
+        - name: {{ .Values.frontAppName }}
+          image: "{{ .Values.frontImageName }}:{{ .Values.frontImageVersion }}"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 80
+---
+# templates - front-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.frontServiceName }}
+  labels:
+    run: {{ .Values.frontServiceName }}
+spec:
+  ports:
+    - name: http
+      port: {{ .Values.service.port }}
+      targetPort: 80
+  selector:
+     app: {{ .Values.frontAppName }}

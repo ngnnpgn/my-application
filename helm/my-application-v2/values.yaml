@@ -1,0 +1,59 @@
+# db postgres values
+dbImageName: postgres
+dbImageVersion: 14
+dbName: postgresserver
+volumeClaimName: postgres-pv-claim
+persistentVolumeName: task-pv-volume
+dbServiceName: dbservice
+
+
+#backend application values
+backendAppName: myapplication
+backendImageName: my-application/backend
+backendImageVersion: latest
+backendServiceName: myapplicationservice
+
+
+#front application values
+frontAppName: frontmyapplication
+frontImageName: my-application/front
+frontImageVersion: latest
+frontServiceName: frontmyapplicationservice
+
+image:
+  repository: nginx
+  tag: stable
+  pullPolicy: IfNotPresent
+
+replicaCount: 2
+service:
+  type: ClusterIP
+  port: 80
+
+
+secret:
+  nameApp: app-env-secret
+  nameDb: db-env-secret
+
+envDb:
+  normal: 
+    SPRING_POSTGRES_URL : "jdbc:postgresql://my-db-test.io:5432/myapp"
+  secret:
+    SPRING_POSTGRES_USERNAME: myapplication
+    SPRING_POSTGRES_PASSWORD : M3P@ssw0rd!
+    SPRING_POSTGRES_BD: myapp
+    
+envApp:
+  normal: 
+    SPRING_POSTGRES_URL : "jdbc:postgresql://my-db-test.io:5432/myapp"
+  secret:
+    SPRING_POSTGRES_USERNAME: myapplication
+    SPRING_POSTGRES_PASSWORD : M3P@ssw0rd!
+    SPRING_POSTGRES_BD: myapp
+
+front:
+  image:
+    repository: my-application/front
+    tag: latest
+  service:
+    port: 80

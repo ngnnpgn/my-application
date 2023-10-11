@@ -1,0 +1,4 @@
+/vagrant/my-application/backend/src/main/java/com/bezkoder/spring/jpa/postgresql/SpringBootJpaPostgresqlApplication.java
+/vagrant/my-application/backend/src/main/java/com/bezkoder/spring/jpa/postgresql/repository/TutorialRepository.java
+/vagrant/my-application/backend/src/main/java/com/bezkoder/spring/jpa/postgresql/model/Tutorial.java
+/vagrant/my-application/backend/src/main/java/com/bezkoder/spring/jpa/postgresql/controller/TutorialController.java

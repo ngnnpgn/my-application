@@ -1,0 +1,19 @@
+# values.yaml
+front:
+  image:
+    repository: your-frontend-image-repo
+    tag: latest
+  service:
+    port: 80
+
+backend:
+  image:
+    repository: your-backend-image-repo
+    tag: latest
+  service:
+    port: 8080
+
+postgres:
+  postgresUser: your-db-username
+  postgresPassword: your-db-password
+  postgresDatabase: your-db-name
